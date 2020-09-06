@@ -1,0 +1,13 @@
+package com.umbby.api;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class UmbbyApiApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(UmbbyApiApplication.class, args);
+    }
+
+}
