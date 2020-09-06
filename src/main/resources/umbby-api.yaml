@@ -3,7 +3,232 @@ info:
   title: Umbby API
   description: Umbby API
   version: 1.0.0
+
 servers:
-  - url: 'https'
+  - url: 'https://api.umbby.com'
+
 paths:
-  
+  /groups:
+    post:
+      summary: Create a new group.
+      tags:
+        - Groups
+      requestBody:
+        description: The group to create.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        201:
+          description: The group was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        400:
+          description: The submitted group is invalid.
+
+    put:
+      summary: Update an existing group.
+      tags:
+        - Groups
+      requestBody:
+        description: The group to update. Must include an ID.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        200:
+          description: The group was updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        400:
+          description: The submitted group is invalid.
+        404:
+          description: Unable to update group
+
+  /groups/{id}:
+    get:
+      summary: Get a group by its ID.
+      tags:
+        - Groups
+      parameters:
+        - name: id
+          in: path
+          description: Group ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        404:
+          description: Not found
+
+    delete:
+      summary: Deletes a specified group.
+      tags:
+        - Groups
+      parameters:
+        - name: id
+          in: path
+          description: Group ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: The specified group successfully deleted.
+        404:
+          description: Unable to find the specified group.
+
+  /groups/{id}/members:
+    post:
+      summary: Add members to a group.
+      tags:
+        - GroupMembers
+      parameters:
+          - name: id
+            in: path
+            description: Group ID
+            required: true
+            schema:
+              type: integer
+      requestBody:
+        description: The members to add to a group.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupMembers'
+      responses:
+        200:
+          description: All members were successfully added to the group.
+
+        400:
+          description: Bad request.
+
+        404:
+          description: Either the group or the users were not found.
+
+  /members:
+    post:
+      summary: Create a new member.
+      tags:
+        - Members
+      requestBody:
+        description: The member to create.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemberRequest'
+      responses:
+        201:
+          description: The member was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        400:
+          description: The submitted member is invalid.
+
+components:
+  schemas:
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        dateCreated:
+          type: string
+          format: date-time
+      required:
+        - name
+
+    GroupMember:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/Member'
+        groupOwner:
+          type: boolean
+        activeMember:
+          type: boolean
+        addedToGroup:
+          type: string
+          format: date-time
+        removedFromGroup:
+          type: string
+          format: date-time
+
+    GroupMembers:
+      type: object
+      properties:
+        groupId:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMember'
+
+    CreateGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        members:
+          type: array
+          items:
+            type: integer
+      required:
+        - name
+
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+        shortName:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        memberSince:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        inactiveSince:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - penName
+
+    CreateMemberRequest:
+      type: object
+      properties:
+        shortName:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+      required:
+        - name
+        - penName
