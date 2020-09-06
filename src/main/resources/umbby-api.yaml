@@ -5,6 +5,9 @@ info:
     Umbby is a group creation and management tool, where members can organize groups and
     sub groups and can schedule meetings, take roll, collect dues, etc.
   version: 1.0.0
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
 
 servers:
   - url: 'https://api.umbby.com'
