@@ -11,6 +11,7 @@ paths:
   /groups:
     post:
       summary: Create a new group.
+      operationId: createGroup
       tags:
         - Groups
       requestBody:
@@ -18,7 +19,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateGroupRequest'
+              $ref: '#/components/schemas/Group'
       responses:
         201:
           description: The group was created successfully.
@@ -31,6 +32,7 @@ paths:
 
     put:
       summary: Update an existing group.
+      operationId: updateGroup
       tags:
         - Groups
       requestBody:
@@ -38,7 +40,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateGroupRequest'
+              $ref: '#/components/schemas/Group'
       responses:
         200:
           description: The group was updated successfully.
@@ -54,6 +56,7 @@ paths:
   /groups/{id}:
     get:
       summary: Get a group by its ID.
+      operationId: getGroupById
       tags:
         - Groups
       parameters:
@@ -74,7 +77,11 @@ paths:
           description: Not found
 
     delete:
-      summary: Deletes a specified group.
+      summary: Deactivate a specified group
+      description: >
+        Deactivates a group, making it no longer accessible. Group data is not deleted and
+        the group can be reactivated.
+      operationId: deleteGroup
       tags:
         - Groups
       parameters:
@@ -86,13 +93,14 @@ paths:
             type: integer
       responses:
         200:
-          description: The specified group successfully deleted.
+          description: The specified group successfully deactivated.
         404:
           description: Unable to find the specified group.
 
   /groups/{id}/members:
     post:
       summary: Add a set of members to a group.
+      operationId: addGroupMembers
       tags:
         - Group Members
       parameters:
@@ -118,6 +126,7 @@ paths:
 
     get:
       summary: Get members of a group.
+      operationId: getGroupMembers
       description: >
         Retrieve a paged list of members of the group, based on search parameters.
         Default list will return a configured maximum number of entries.
@@ -131,9 +140,12 @@ paths:
           schema:
             type: integer
 
-        - name: name
+        - name: q
           in: query
-          description: Search by name or partial name in firstName, lastName, or shortName fields
+          description: >
+            Query string to be used for searching. Will search within all name and email
+            address fields. Query matches will be anywhere within the string.
+          required: false
           schema:
             type: string
 
@@ -149,6 +161,25 @@ paths:
               - auditors
               - members
               - inactive
+
+        - name: limit
+          in: query
+          description: >
+            The maximum number of records to return. Default is configured at
+            the application level.
+          required: false
+          schema:
+            type: integer
+
+        - name: after_id
+          in: query
+          description: >
+            The starting point for the search set. If field is omitted, then the set
+            starts at the first matching member.
+          required: false
+          schema:
+            type: integer
+
       responses:
         200:
           description: Members meeting the search criteria
@@ -158,8 +189,50 @@ paths:
                 $ref: '#/components/schemas/GroupMembers'
 
   /groups/{groupId}/members/{memberId}:
+    put:
+      summary: Update a member of a group.
+      operationId: updateGroupMember
+      tags:
+        - Group Members
+      parameters:
+        - name: groupId
+          in: path
+          description: Group ID
+          required: true
+          schema:
+            type: integer
+
+        - name: memberId
+          in: path
+          description: Member ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: The members to add to a group.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupMember'
+      responses:
+        200:
+          description: Group member updated successfully.
+          content:
+            application/json:
+              schema:
+                # TODO: Change object to include search result criteria (HATEAOS)
+                $ref: '#/components/schemas/GroupMember'
+        400:
+          description: Group member update request was invalid.
+        404:
+          description: Unable to find specified group member.
+
     delete:
-      summary: Remove members from a group.
+      summary: Deactivate group member
+      description: >
+        Sets the status of a group member to inactive. Does not remove the record.
+        Does not delete the member account.
+      operationId: deactivateGroupMember
       tags:
         - Group Members
       parameters:
@@ -182,7 +255,11 @@ paths:
 
   /members:
     post:
-      summary: Create a new member.
+      summary: Create member accounts
+      description: >
+        Create one or more member accounts and optionally add them to specified groups.
+        Member ID field must be blank.
+      operationId: createMember
       tags:
         - Members
       requestBody:
@@ -190,19 +267,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateMemberRequest'
+              $ref: '#/components/schemas/MemberWithGroups'
       responses:
         201:
           description: The member was created successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Member'
+                # TODO: Change this into a list object with results and paging
+                $ref: '#/components/schemas/MemberWithGroups'
         400:
-          description: The submitted member is invalid.
+          # TODO: Create an error object with the appropriate details
+          description: One or more of the submitted members was invalid.
 
     put:
-      summary: Update a member.
+      summary: Update member accounts
+      description: >
+        Updates member-specific properties for one or more member accounts.
+        Cannot add or remove a member from a group.
+      operationId: updateMember
       tags:
         - Members
       requestBody:
@@ -210,6 +293,7 @@ paths:
         content:
           application/json:
             schema:
+              # TODO: Change this into a list object
               $ref: '#/components/schemas/Member'
       responses:
         200:
@@ -217,15 +301,69 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Member'
+                # TODO: Change this into a list object with results and paging
+                $ref: '#/components/schemas/MemberWithGroups'
         400:
-          description: Invalid member object.
+          # TODO: Create an error object with the appropriate details
+          description: One or more of the submitted members was invalid.
         404:
           description: Unable to find the specified member account.
 
+    get:
+      summary: Get a list of member accounts
+      description: >
+        Get a paged list of member accounts based on query criteria. If no query is
+        specified, then returns the users alphabetically.
+      operationId: getMembersList
+      tags:
+        - Members
+      parameters:
+        - name: q
+          in: query
+          description: >
+            Query string to be used for searching. Will search within all name and email
+            address fields.
+          required: false
+          schema:
+            type: string
+
+        - name: limit
+          in: query
+          description: >
+            The maximum number of records to return. Default is configured at
+            the application level.
+          required: false
+          schema:
+            type: integer
+
+        - name: after_id
+          in: query
+          description: >
+            The starting point for the search set. If field is omitted, then the set
+            starts at the first matching member.
+          required: false
+          schema:
+            type: integer
+
+        - name: groups
+          in: query
+          description: Include or omit member groups. Default is true.
+          required: false
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Search performed successfully
+          content:
+            application/json:
+              schema:
+                # TODO: Change this into a list object with results and paging
+                $ref: '#/components/schemas/MemberWithGroups'
+
   /members/{id}:
     get:
-      summary: Get a member by its ID.
+      summary: Get a member by its ID
+      operationId: getMemberById
       tags:
         - Members
       parameters:
@@ -235,18 +373,28 @@ paths:
           required: true
           schema:
             type: integer
+
+        - name: groups
+          in: query
+          description: Include or omit member groups. Default is true.
+          required: false
+          schema:
+            type: boolean
       responses:
         200:
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Member'
+                $ref: '#/components/schemas/MemberWithGroups'
         404:
           description: Not found
 
     delete:
-      summary: Delete/deactivate a member account
+      summary: Deactivate a member account
+      description: >
+        Deactivates a member account and deactivates all its group memberships.
+      operationId: deactivateMember
       tags:
         - Members
       parameters:
@@ -258,7 +406,7 @@ paths:
             type: integer
       responses:
         200:
-          description: Member was deleted.
+          description: Member was deactivated.
         404:
           description: Member was not found.
 
@@ -276,13 +424,15 @@ components:
         dateCreated:
           type: string
           format: date-time
+        createdBy:
+          $ref: '#/components/schemas/Member'
       required:
         - name
 
     GroupMember:
       type: object
       properties:
-        user:
+        member:
           $ref: '#/components/schemas/Member'
         groupOwner:
           type: boolean
@@ -309,20 +459,6 @@ components:
         totalMembers:
           type: integer
 
-    CreateGroupRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        members:
-          type: array
-          items:
-            type: integer
-      required:
-        - name
-
     Member:
       type: object
       properties:
@@ -346,20 +482,32 @@ components:
           format: date-time
       required:
         - id
-        - name
-        - penName
 
-    CreateMemberRequest:
+    MemberWithGroups:
+      allOf:
+        - $ref: '#/components/schemas/Member'
+        - type: object
+          properties:
+            groups:
+              type: array
+              items:
+                $ref: '#/components/schemas/MemberGroup'
+
+    MemberGroup:
       type: object
       properties:
-        shortName:
+        groupId:
+          type: integer
+        group:
+          $ref: '#/components/schemas/Group'
+        groupOwner:
+          type: boolean
+        activeMember:
+          type: boolean
+        addedToGroup:
           type: string
-        firstName:
+          format: date-time
+        removedFromGroup:
           type: string
-        lastName:
-          type: string
-        email:
-          type: string
-      required:
-        - name
-        - penName
+          format: date-time
+
