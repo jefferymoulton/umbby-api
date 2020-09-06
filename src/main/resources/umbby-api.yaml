@@ -92,9 +92,9 @@ paths:
 
   /groups/{id}/members:
     post:
-      summary: Add members to a group.
+      summary: Add a set of members to a group.
       tags:
-        - GroupMembers
+        - Group Members
       parameters:
           - name: id
             in: path
@@ -110,13 +110,75 @@ paths:
               $ref: '#/components/schemas/GroupMembers'
       responses:
         200:
-          description: All members were successfully added to the group.
-
+          description: Members were successfully added to the group.
         400:
           description: Bad request.
-
         404:
           description: Either the group or the users were not found.
+
+    get:
+      summary: Get members of a group.
+      description: >
+        Retrieve a paged list of members of the group, based on search parameters.
+        Default list will return a configured maximum number of entries.
+      tags:
+        - Group Members
+      parameters:
+        - name: id
+          in: path
+          description: Group ID
+          required: true
+          schema:
+            type: integer
+
+        - name: name
+          in: query
+          description: Search by name or partial name in firstName, lastName, or shortName fields
+          schema:
+            type: string
+
+        - name: type
+          in: query
+          description: Specifies the type of members to return. By default, it returns active members.
+          schema:
+            type: string
+            enum:
+              - all
+              - active
+              - owners
+              - auditors
+              - members
+              - inactive
+      responses:
+        200:
+          description: Members meeting the search criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMembers'
+
+  /groups/{groupId}/members/{memberId}:
+    delete:
+      summary: Remove members from a group.
+      tags:
+        - Group Members
+      parameters:
+        - name: groupId
+          in: path
+          description: Group ID
+          required: true
+          schema:
+            type: integer
+
+        - name: memberId
+          in: path
+          description: Member ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Members were successfuly removed from the group.
 
   /members:
     post:
@@ -138,6 +200,67 @@ paths:
                 $ref: '#/components/schemas/Member'
         400:
           description: The submitted member is invalid.
+
+    put:
+      summary: Update a member.
+      tags:
+        - Members
+      requestBody:
+        description: The member to update.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Member'
+      responses:
+        200:
+          description: Member updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        400:
+          description: Invalid member object.
+        404:
+          description: Unable to find the specified member account.
+
+  /members/{id}:
+    get:
+      summary: Get a member by its ID.
+      tags:
+        - Members
+      parameters:
+        - name: id
+          in: path
+          description: Member ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        404:
+          description: Not found
+
+    delete:
+      summary: Delete/deactivate a member account
+      tags:
+        - Members
+      parameters:
+        - name: id
+          in: path
+          description: Member ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Member was deleted.
+        404:
+          description: Member was not found.
 
 components:
   schemas:
@@ -181,6 +304,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GroupMember'
+        count:
+          type: integer
+        totalMembers:
+          type: integer
 
     CreateGroupRequest:
       type: object
@@ -207,6 +334,8 @@ components:
           type: string
         lastName:
           type: string
+        email:
+          type: string
         memberSince:
           type: string
           format: date-time
@@ -228,6 +357,8 @@ components:
         firstName:
           type: string
         lastName:
+          type: string
+        email:
           type: string
       required:
         - name
