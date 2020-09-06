@@ -1,13 +1,17 @@
 openapi: 3.0.0
 info:
   title: Umbby API
-  description: Umbby API
+  description: >
+    Umbby is a group creation and management tool, where members can organize groups and
+    sub groups and can schedule meetings, take roll, collect dues, etc.
   version: 1.0.0
 
 servers:
   - url: 'https://api.umbby.com'
 
 paths:
+  # Groups
+
   /groups:
     post:
       summary: Create a new group.
@@ -80,7 +84,8 @@ paths:
       summary: Deactivate a specified group
       description: >
         Deactivates a group, making it no longer accessible. Group data is not deleted and
-        the group can be reactivated.
+        the group can be reactivated. This will also deactivate any group member records
+        but will not deactivate the member accounts.
       operationId: deleteGroup
       tags:
         - Groups
@@ -96,6 +101,8 @@ paths:
           description: The specified group successfully deactivated.
         404:
           description: Unable to find the specified group.
+
+  # Group Members
 
   /groups/{id}/members:
     post:
@@ -118,10 +125,13 @@ paths:
               $ref: '#/components/schemas/GroupMembers'
       responses:
         200:
+          # TODO: Add details and return values of those that were added
           description: Members were successfully added to the group.
         400:
+          # TODO: Add error messaging for what was bad in the request
           description: Bad request.
         404:
+          # TODO: Add error messaging response with the group and/or user details that were not found
           description: Either the group or the users were not found.
 
     get:
@@ -186,8 +196,10 @@ paths:
           content:
             application/json:
               schema:
+                # TODO: Change this to search results object (HATEAOS)
                 $ref: '#/components/schemas/GroupMembers'
 
+  # TODO: Change this to a group request so more than one member account can be updated at once.
   /groups/{groupId}/members/{memberId}:
     put:
       summary: Update a member of a group.
@@ -227,6 +239,7 @@ paths:
         404:
           description: Unable to find specified group member.
 
+    # TODO: Change this to a group delete
     delete:
       summary: Deactivate group member
       description: >
@@ -252,6 +265,8 @@ paths:
       responses:
         200:
           description: Members were successfuly removed from the group.
+
+  # Members
 
   /members:
     post:
