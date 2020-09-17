@@ -17,48 +17,102 @@ paths:
 
   /groups:
     post:
-      summary: Create a new group.
-      operationId: createGroup
+      summary: Create group(s).
+      operationId: createGroups
       tags:
         - Groups
       requestBody:
-        description: The group to create.
+        description: Groups to create.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Group'
+              $ref: '#/components/schemas/GroupsRequest'
       responses:
         201:
           description: The group was created successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Group'
+                $ref: '#/components/schemas/Groups'
         400:
           description: The submitted group is invalid.
 
     put:
-      summary: Update an existing group.
+      summary: Update existing groups.
       operationId: updateGroup
       tags:
         - Groups
       requestBody:
-        description: The group to update. Must include an ID.
+        description: The groups to update. Must include IDs.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Group'
+              $ref: '#/components/schemas/Groups'
       responses:
         200:
-          description: The group was updated successfully.
+          description: Group update results.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Group'
+                $ref: '#/components/schemas/Groups'
         400:
           description: The submitted group is invalid.
         404:
           description: Unable to update group
+
+    get:
+      summary: Get a list of groups.
+      operationId: getGroupList
+      tags:
+        - Groups
+      parameters:
+        - name: q
+          in: query
+          description: >
+            Query string to be used for searching. Will search within all name and description
+            fields. Query matches will be anywhere within the string.
+          required: false
+          schema:
+            type: string
+
+        - name: type
+          in: query
+          description: >
+            Specifies the type of groups to return. By default, it returns active groups.
+          schema:
+            type: string
+            enum:
+              - all
+              - active
+              - owners
+              - auditors
+              - members
+              - inactive
+
+        - name: limit
+          in: query
+          description: >
+            The maximum number of records to return. Default is configured at
+            the application level.
+          required: false
+          schema:
+            type: integer
+
+        - name: after_id
+          in: query
+          description: >
+            The starting point for the search set. If field is omitted, then the set
+            starts at the first matching member.
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Groups'
 
   /groups/{id}:
     get:
@@ -311,21 +365,17 @@ paths:
         content:
           application/json:
             schema:
-              # TODO: Change this into a list object
-              $ref: '#/components/schemas/Member'
+              $ref: '#/components/schemas/Members'
       responses:
         200:
           description: Member updated successfully.
           content:
             application/json:
               schema:
-                # TODO: Change this into a list object with results and paging
-                $ref: '#/components/schemas/MemberWithGroups'
+                $ref: '#/components/schemas/Members'
         400:
           # TODO: Create an error object with the appropriate details
           description: One or more of the submitted members was invalid.
-        404:
-          description: Unable to find the specified member account.
 
     get:
       summary: Get a list of member accounts
@@ -375,8 +425,7 @@ paths:
           content:
             application/json:
               schema:
-                # TODO: Change this into a list object with results and paging
-                $ref: '#/components/schemas/MemberWithGroups'
+                $ref: '#/components/schemas/Members'
 
   /members/{id}:
     get:
@@ -430,8 +479,7 @@ paths:
 
 components:
   schemas:
-    Group:
-      type: object
+    BaseGroup:
       properties:
         id:
           type: integer
@@ -439,13 +487,50 @@ components:
           type: string
         description:
           type: string
-        dateCreated:
+        status:
           type: string
-          format: date-time
-        createdBy:
-          $ref: '#/components/schemas/Member'
-      required:
-        - name
+          enum: [ ACTIVE, INACTIVE ]
+
+    Group:
+      allOf:
+        - $ref: '#'#/components/schemas/BaseGroup'
+        - type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            description:
+              type: string
+            status:
+              type: string
+              enum: [ ACTIVE, INACTIVE ]
+            dateCreated:
+              type: string
+              format: date-time
+            dateDeleted:
+              type: string
+              format: date-time
+            createdBy:
+              $ref: '#/components/schemas/Member'
+          required:
+            - name
+
+    GroupsRequest:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/BaseGroup'
+
+    Groups:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
 
     GroupMember:
       type: object
@@ -482,24 +567,32 @@ components:
       properties:
         id:
           type: integer
-        shortName:
-          type: string
         firstName:
           type: string
         lastName:
           type: string
         email:
           type: string
+        status:
+          type: string
+          enum: [ ACTIVE, INACTIVE ]
         memberSince:
           type: string
           format: date-time
-        active:
-          type: boolean
         inactiveSince:
           type: string
           format: date-time
       required:
-        - id
+        - email
+        - status
+
+    Members:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
 
     MemberWithGroups:
       allOf:
@@ -511,6 +604,14 @@ components:
               items:
                 $ref: '#/components/schemas/MemberGroup'
 
+    MembersWithGroups:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberWithGroups'
+
     MemberGroup:
       type: object
       properties:
@@ -518,6 +619,12 @@ components:
           type: integer
         group:
           $ref: '#/components/schemas/Group'
+        role:
+          type: string
+          enum:
+            - MEMBER
+            - OWNER
+            - AUDITOR
         groupOwner:
           type: boolean
         activeMember:
@@ -528,4 +635,7 @@ components:
         removedFromGroup:
           type: string
           format: date-time
+      required:
+        - groupId
+        - group
 
