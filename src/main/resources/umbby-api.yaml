@@ -17,44 +17,48 @@ paths:
 
   /groups:
     post:
-      summary: Create group(s).
-      operationId: createGroups
+      summary: Create group.
+      operationId: createGroup
       tags:
         - Groups
       requestBody:
-        description: Groups to create.
+        description: Group to create. ID field must be NULL or will result in an error.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GroupsRequest'
+              $ref: '#/components/schemas/Group'
       responses:
         201:
           description: The group was created successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Groups'
+                $ref: '#/components/schemas/GroupResponse'
         400:
           description: The submitted group is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     put:
-      summary: Update existing groups.
+      summary: Update existing group.
       operationId: updateGroup
       tags:
         - Groups
       requestBody:
-        description: The groups to update. Must include IDs.
+        description: The group to update. ID field cannot be NULL or will result in an error.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Groups'
+              $ref: '#/components/schemas/GroupResponse'
       responses:
         200:
           description: Group update results.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Groups'
+                $ref: '#/components/schemas/GroupResponse'
         400:
           description: The submitted group is invalid.
         404:
@@ -112,7 +116,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Groups'
+                $ref: '#/components/schemas/GroupResponse'
 
   /groups/{id}:
     get:
@@ -327,9 +331,9 @@ paths:
 
   /members:
     post:
-      summary: Create member accounts
+      summary: Create a member account
       description: >
-        Create one or more member accounts and optionally add them to specified groups.
+        Create one a member account and optionally add that account to specified groups.
         Member ID field must be blank.
       operationId: createMember
       tags:
@@ -339,43 +343,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MemberWithGroups'
+              $ref: '#/components/schemas/Member'
       responses:
         201:
           description: The member was created successfully.
           content:
             application/json:
               schema:
-                # TODO: Change this into a list object with results and paging
-                $ref: '#/components/schemas/MemberWithGroups'
+                $ref: '#/components/schemas/MemberResponse'
         400:
-          # TODO: Create an error object with the appropriate details
           description: One or more of the submitted members was invalid.
-
-    put:
-      summary: Update member accounts
-      description: >
-        Updates member-specific properties for one or more member accounts.
-        Cannot add or remove a member from a group.
-      operationId: updateMember
-      tags:
-        - Members
-      requestBody:
-        description: The member to update.
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Members'
-      responses:
-        200:
-          description: Member updated successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Members'
-        400:
-          # TODO: Create an error object with the appropriate details
-          description: One or more of the submitted members was invalid.
+                $ref: '#/components/schemas/ErrorResponse'
 
     get:
       summary: Get a list of member accounts
@@ -425,7 +406,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Members'
+                $ref: '#/components/schemas/MemberResponse'
 
   /members/{id}:
     get:
@@ -453,9 +434,40 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MemberWithGroups'
+                $ref: '#/components/schemas/MemberResponse'
         404:
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      summary: Update a member account
+      description: >
+        Updates specific properties for a single member account.
+      operationId: updateMember
+      tags:
+        - Members
+      requestBody:
+        description: The member to update. Only fields that need to be updated are included.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Member'
+      responses:
+        200:
+          description: Member updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponse'
+        400:
+          description: One or more of the submitted members was invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     delete:
       summary: Deactivate a member account
@@ -479,7 +491,7 @@ paths:
 
 components:
   schemas:
-    BaseGroup:
+    Group:
       properties:
         id:
           type: integer
@@ -490,47 +502,16 @@ components:
         status:
           type: string
           enum: [ ACTIVE, INACTIVE ]
-
-    Group:
-      allOf:
-        - $ref: '#'#/components/schemas/BaseGroup'
-        - type: object
-          properties:
-            id:
-              type: integer
-            name:
-              type: string
-            description:
-              type: string
-            status:
-              type: string
-              enum: [ ACTIVE, INACTIVE ]
-            dateCreated:
-              type: string
-              format: date-time
-            dateDeleted:
-              type: string
-              format: date-time
-            createdBy:
-              $ref: '#/components/schemas/Member'
-          required:
-            - name
-
-    GroupsRequest:
-      type: object
-      properties:
-        groups:
-          type: array
-          items:
-            $ref: '#/components/schemas/BaseGroup'
-
-    Groups:
-      type: object
-      properties:
-        groups:
-          type: array
-          items:
-            $ref: '#/components/schemas/Group'
+        dateCreated:
+          type: string
+          format: date-time
+        createdBy:
+          nullable: true
+          $ref: '#/components/schemas/Member'
+        dateDeleted:
+          type: string
+          format: date-time
+          nullable: true
 
     GroupMember:
       type: object
@@ -562,6 +543,14 @@ components:
         totalMembers:
           type: integer
 
+    GroupResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
+
     Member:
       type: object
       properties:
@@ -582,35 +571,14 @@ components:
         inactiveSince:
           type: string
           format: date-time
+        groups:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/MemberGroup'
       required:
         - email
         - status
-
-    Members:
-      type: object
-      properties:
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/Member'
-
-    MemberWithGroups:
-      allOf:
-        - $ref: '#/components/schemas/Member'
-        - type: object
-          properties:
-            groups:
-              type: array
-              items:
-                $ref: '#/components/schemas/MemberGroup'
-
-    MembersWithGroups:
-      type: object
-      properties:
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/MemberWithGroups'
 
     MemberGroup:
       type: object
@@ -618,6 +586,7 @@ components:
         groupId:
           type: integer
         group:
+          nullable: true
           $ref: '#/components/schemas/Group'
         role:
           type: string
@@ -638,4 +607,41 @@ components:
       required:
         - groupId
         - group
+
+    MemberResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+        pagination:
+          type: object
+          $ref: '#/components/schemas/Pagination'
+
+    Error:
+      type: object
+      properties:
+        status:
+          type: integer
+        detail:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+
+    Pagination:
+      type: object
+      properties:
+        first_id:
+          type: integer
+        last_id:
+          type: integer
+        limit:
+          type: integer
 
